@@ -49,9 +49,9 @@ fun resultado(res: ResultadoOperacion){
 fun mostrarEstado(estado : EstadoPedido){
     when(estado){
         is EstadoPedido.Pendiente -> println("Estado: ${estado.descripcion}")
-        is EstadoPedido.Confirmado -> println("Estado: ${estado.descripcion} \n Fecha: ${estado.fechaConfirmacion}")
-        is EstadoPedido.Enviado -> println("Estado: ${estado.descripcion} \n Numero seguimiento : ${estado.numeroSeguimiento}")
-        is EstadoPedido.Entregado -> println("Estado: ${estado.descripcion}\n Fecha entrega: ${estado.fechaEntrega}")
+        is EstadoPedido.Confirmado -> println("Estado: ${estado.descripcion} \n*Fecha: ${estado.fechaConfirmacion}")
+        is EstadoPedido.Enviado -> println("Estado: ${estado.descripcion} \n*Numero seguimiento : ${estado.numeroSeguimiento}")
+        is EstadoPedido.Entregado -> println("Estado: ${estado.descripcion}\n*Fecha entrega: ${estado.fechaEntrega}")
 
     }
 
@@ -154,7 +154,8 @@ class ProcesadorPedidos(private  val servicio: ServicioPedidos){
             EstadoPedido.Enviado("SEG-${pedido.id}"),
             EstadoPedido.Entregado("07-10-2025")
         )
-        println("-------------------------------")
+        println("-----------------------------------------")
+
         estados.forEach { estado -> mostrarEstado(estado)
             delay(2000)}
     }
