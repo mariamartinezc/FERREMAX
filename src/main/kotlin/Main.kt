@@ -28,7 +28,7 @@ sealed class EstadoPedido(val descripcion: String){
     data class Enviado(val numeroSeguimiento: String) : EstadoPedido("Enviado")
     //ENTREGADO
     data class Entregado(val fechaEntrega: String) : EstadoPedido("Entregado")
-
+    //Falta agregar cancelado
 }
 
 
@@ -52,6 +52,7 @@ fun mostrarEstado(estado : EstadoPedido){
         is EstadoPedido.Confirmado -> println("Estado: ${estado.descripcion} \n*Fecha: ${estado.fechaConfirmacion}")
         is EstadoPedido.Enviado -> println("Estado: ${estado.descripcion} \n*Numero seguimiento : ${estado.numeroSeguimiento}")
         is EstadoPedido.Entregado -> println("Estado: ${estado.descripcion}\n*Fecha entrega: ${estado.fechaEntrega}")
+        //agrerar cancelado
 
     }
 
