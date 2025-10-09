@@ -29,6 +29,7 @@ sealed class EstadoPedido(val descripcion: String){
     //ENTREGADO
     data class Entregado(val fechaEntrega: String) : EstadoPedido("Entregado")
     //Falta agregar cancelado
+    data class Cancelado(val motivo: String): EstadoPedido("Cancelado")
 }
 
 
@@ -52,11 +53,25 @@ fun mostrarEstado(estado : EstadoPedido){
         is EstadoPedido.Confirmado -> println("Estado: ${estado.descripcion} \n*Fecha: ${estado.fechaConfirmacion}")
         is EstadoPedido.Enviado -> println("Estado: ${estado.descripcion} \n*Numero seguimiento : ${estado.numeroSeguimiento}")
         is EstadoPedido.Entregado -> println("Estado: ${estado.descripcion}\n*Fecha entrega: ${estado.fechaEntrega}")
-        //agrerar cancelado
+        //agregar cancelado
+        is EstadoPedido.Cancelado -> println("Estado: ${estado.descripcion}\n*Motivo: ${estado.motivo}")
 
     }
 
 }
+fun mostrarPedidoCompleto(pedido: Pedido){
+    println("----")
+    println("Pedido ID  : ${pedido.id}")
+    println("Cliente ID : ${pedido.clienteId}")
+    println("Productos  : ${pedido.productos.joinToString()}")
+    println("Total      : ${pedido.total}")
+    mostrarEstado(pedido.estado)
+    println("----")
+
+}
+
+
+
 //cambiamos listOf a mutable para poder agregar nuevos clientes
 class ServicioPedidos{
     val clientes = mutableListOf(
@@ -70,6 +85,25 @@ class ServicioPedidos{
     }
 
     private val pedidosGuardados = mutableListOf<Pedido>()
+
+    suspend fun cancelarPedido(pedidoId: Int, motivo: String){
+        delay(2000)
+        val pedido = pedidosGuardados.find { it.id == pedidoId }
+        if (pedido != null){
+            val pedidoCancelado = pedido.copy(estado = EstadoPedido.Cancelado(motivo))
+            pedidosGuardados.remove(pedido)
+            pedidosGuardados.add(pedidoCancelado)
+            println("Pedido con Id $pedidoId CANCELADO EXITOSAMENTE")
+            mostrarPedidoCompleto(pedidoCancelado)
+        } else{
+            println("No se puede cancelar Pedido Id $pedidoId NO EXISTE")
+        }
+    }
+
+    suspend fun obtenerPedido(id: Int): Pedido?{
+        delay(2000)
+        return pedidosGuardados.find {it.id == id}
+    }
 
     suspend fun obtenerCliente(id: Int): Cliente?{
         //val cliente = cliente()
@@ -93,12 +127,18 @@ class ServicioPedidos{
         return productos.none{it in sinStock}
 
     }
+
     suspend fun guardarPedido(pedido: Pedido): ResultadoOperacion{
         delay(2000)
         pedidosGuardados.add(pedido)
-        return ResultadoOperacion.Exito("Estado pedido: ${pedido.id} \n--> Guardado Exitoso <--")
+        return ResultadoOperacion.Exito("Pedido: ${pedido.id} \n--> Guardado Exitoso <--")
+    }
+
+    fun listarIdDePedidos():List<Int>{
+        return pedidosGuardados.map{ it.id }
     }
 }
+
 
 
 //ProcesadorPedidos
@@ -120,9 +160,6 @@ class ProcesadorPedidos(private  val servicio: ServicioPedidos){
             }
         } ?: return ResultadoOperacion.Error("Error: Cliente no encontrado")
 
-        if (!servicio.validarInventario(productos)){
-        return ResultadoOperacion.Error("Productos Sierra sin stock ")
-    }
         val total = servicio.calcularTotal(productos)
         //Apply
 
@@ -140,14 +177,21 @@ class ProcesadorPedidos(private  val servicio: ServicioPedidos){
             println("Total        $ : ${this.total}")
             println(">>>>-----------------------------------<<<< ")
         }
-    val resultado = servicio.guardarPedido(pedido)
-        if (resultado is ResultadoOperacion.Exito){
-            progresoEstado(pedido)
+        servicio.guardarPedido(pedido)
+
+        if(!servicio.validarInventario(productos)){
+            println("----")
+            servicio.cancelarPedido(pedido.id,"Producto Sierra no disponible")
+            return ResultadoOperacion.Error("Pedido cancelado Producto Sierra sin Stock")
         }
-        return resultado
+        progresoEstado(pedido)
+        return ResultadoOperacion.Exito("Pedido ${pedido.id} procesado exitosamente")
+
+
     }
+
     private suspend fun progresoEstado(pedido: Pedido){
-        println(" -->           Estado pedido               ")
+        println(" -->           Estado pedido ${pedido.id} ")
         val estados = listOf(
 
             EstadoPedido.Pendiente,
@@ -169,7 +213,7 @@ fun main() = runBlocking{
     val servicio = ServicioPedidos()
     val procesPedido = ProcesadorPedidos(servicio)
 
-    //Crear objetos CLIENTE
+    //Crear objetos y agregar CLIENTE
     val cliente1 = Cliente(4,"Fernando Cabrera","Fer.cab@gmail.com",true)
     println("Cliente sin guardar en la lista")
     //cliente1.imprimir()
@@ -185,16 +229,16 @@ fun main() = runBlocking{
     resultado(pedido4)
 
     val pedido2 = procesPedido.procesoPedidoCom(3,listOf("Taladro","Martillo"))
-    //resultado(pedido2)//Muestra Error: Cliente con ID 3  inactivo
+    //resultado(pedido2)//Muestra Error: Cliente con ID 3 inactivo
 
     val pedido3 = procesPedido.procesoPedidoCom(4,listOf("Taladro"))
     resultado(pedido3)
-
-    val pedidoSinStock = procesPedido.procesoPedidoCom(4, listOf("Taladro","Sierra"))
-    //val pedidoClienteNoExite = procesPedido.procesoPedidoCom(7,listOf("Taladro","Martillo"))
+    val pedidoSinStock = procesPedido.procesoPedidoCom(2, listOf("Taladro", "Sierra"))
 
     resultado(pedidoSinStock)
-    //resultado(pedidoClienteNoExite)//Error: Cliente no encontrado
+    //val pedidoClienteNoExite = procesPedido.procesoPedidoCom(7,listOf("Taladro","Martillo"))
 
+
+    //resultado(pedidoClienteNoExite)//Error: Cliente no encontrado
 
 }
